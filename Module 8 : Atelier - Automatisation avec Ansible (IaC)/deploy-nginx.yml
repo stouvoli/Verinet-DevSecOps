@@ -1,0 +1,16 @@
+- name: Installer et configurer Nginx
+  hosts: webservers
+  become: yes
+
+  tasks:
+    - name: Installer le paquet Nginx
+      apt:
+        name: nginx
+        state: present
+        update_cache: yes
+
+    - name: S'assurer que Nginx est démarré et activé au boot
+      service:
+        name: nginx
+        state: started
+        enabled: yes
