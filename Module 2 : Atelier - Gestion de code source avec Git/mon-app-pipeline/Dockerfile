@@ -1,6 +1,6 @@
 # --- STAGE 1 : Build ---
 # On utilise une image complète de Node pour installer les dépendances
-FROM node:18 as builder
+FROM node:18 AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
