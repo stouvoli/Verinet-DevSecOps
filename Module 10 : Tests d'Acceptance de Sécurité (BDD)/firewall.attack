@@ -1,0 +1,12 @@
+Feature: Regles du pare-feu pour notre serveur web
+
+Scenario: Verifier que le port Telnet (23) est bien ferme
+  Given "nmap" is installed
+  When I launch a "nmap" attack with:
+    """
+    nmap -p23 localhost
+    """
+  Then the output should not contain:
+    """
+    23/tcp open
+    """
