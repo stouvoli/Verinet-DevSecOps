@@ -2,12 +2,14 @@ version: '3.8'
 services:
   sonarqube-db:
     image: postgres:alpine
+    container_name: sonarqube-db
     environment:
       - POSTGRES_USER=sonar
       - POSTGRES_PASSWORD=sonar
       - POSTGRES_DB=sonarqube
   sonarqube:
     image: sonarqube
+    container_name: sonarqube
     ports:
       - "9000:9000"
     depends_on:
@@ -18,6 +20,7 @@ services:
       - SONAR_JDBC_PASSWORD=sonar
   jenkins:
     image: jenkins/jenkins:lts
+    container_name: jenkins
     ports:
       - "8080:8080"
       - "50000:50000"
