@@ -1,30 +1,35 @@
 pipeline {
-    agent any
+    agent {
+        dockerfile {
+            dir 'agent'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
 
-    tools {
-        // "NodeJS-18" est le nom de l'outil configuré dans Jenkins
-        nodejs 'NodeJS-18'
+    environment {
+        SONAR_TOKEN = credentials('sonarqube-token')
     }
 
     stages {
         stage('Build') {
             steps {
-                echo '--- ETAPE DE BUILD ---'
                 sh 'npm install'
             }
         }
 
         stage('Analyse SonarQube (SAST & SCA)') {
             steps {
-                // On réutilise le wrapper standard, maintenant que tout est bien configuré
-                // "SonarQube" est le nom du serveur configuré dans Jenkins
+                // La seule modification est l'ajout de ce wrapper
                 withSonarQubeEnv('SonarQube') {
                     script {
-                        // "SonarScanner" est le nom de l'outil configuré dans Jenkins
-                        def scannerHome = tool 'SonarScanner'
-                        // On exécute le scanner sans arguments supplémentaires,
-                        // withSonarQubeEnv se charge de l'authentification
-                        sh "${scannerHome}/bin/sonar-scanner"
+                        // Le nom du réseau est basé sur le nom du dossier de votre projet 
+                        docker.image('sonarsource/sonar-scanner-cli').inside('--network mon-app-pipeline_default') {
+                            sh """
+                               sonar-scanner \\
+                               -Dsonar.host.url=http://sonarqube:9000 \\
+                               -Dsonar.token=${SONAR_TOKEN}
+                            """
+                        }
                     }
                 }
             }
@@ -32,8 +37,7 @@ pipeline {
 
         stage('Vérification du Quality Gate') {
             steps {
-                // Cette étape va maintenant trouver le contexte de l'analyse précédente
-                timeout(time: 5, unit: 'MINUTES') {
+                timeout(time: 15, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
             }
@@ -43,8 +47,9 @@ pipeline {
             steps {
                 script {
                     def imageName = "votre-user/mon-app-node:${env.BUILD_NUMBER}"
-                    sh "docker build -t ${imageName} ."
-                    sh "trivy image --exit-code 1 --severity HIGH,CRITICAL ${imageName}"
+                    def customImage = docker.build(imageName)
+
+                    sh "docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image --exit-code 1 --severity HIGH,CRITICAL ${imageName}"
                 }
             }
         }
